@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-white text-ink font-body antialiased;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display text-navy;
+  }
+  ::selection {
+    background-color: #CFA779;
+    color: #162E45;
+  }
+}
+
+@layer utilities {
+  .container-wrap {
+    @apply mx-auto w-full max-w-wrap px-5 sm:px-8 lg:px-10;
+  }
+  .eyebrow {
+    @apply inline-flex items-center gap-2 text-[11px] sm:text-xs font-semibold uppercase tracking-[0.22em] text-sand-600;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm bg-sand px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-navy-800 transition-colors duration-200 hover:bg-sand-500 active:bg-sand-600;
+  }
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-navy-300/60 px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-navy transition-colors duration-200 hover:border-navy hover:bg-navy hover:text-white;
+  }
+  .btn-outline-light {
+    @apply inline-flex items-center justify-center gap-2 rounded-sm border border-white/30 px-6 py-3.5 text-sm font-semibold uppercase tracking-wide text-white transition-colors duration-200 hover:border-sand hover:text-sand;
+  }
+  .blueprint-bg {
+    background-image: linear-gradient(rgba(207,207,234,0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(207,207,234,0.14) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
