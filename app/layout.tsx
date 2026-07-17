@@ -17,8 +17,8 @@ const manrope = Manrope({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://gorizont-stroy.example"),
-  title: "Горизонт Строй — строительная компания полного цикла",
+  metadataBase: new URL("https://lastocka-stroy.ru"),
+  title: "Ласточка Строй — строительная компания полного цикла",
   description:
     "Строим дома, коммерческие и промышленные объекты под заказ. Проектирование, смета, стройка и сдача под ключ. Гарантия по договору, собственные бригады.",
   keywords: [
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     "проект под заказ",
   ],
   openGraph: {
-    title: "Горизонт Строй — строительство под заказ",
+    title: "Ласточка Строй — строительство под заказ",
     description:
       "Проекты любой сложности под ключ: от эскиза до сдачи объекта. Собственные бригады, гарантия по договору.",
     locale: "ru_RU",
