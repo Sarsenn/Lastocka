@@ -10,6 +10,7 @@ import Testimonials from "@/components/Testimonials";
 import FAQ from "@/components/FAQ";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import AlbumSection from "@/components/AlbumSection";
 
 export default function Home() {
   return (
@@ -23,6 +24,7 @@ export default function Home() {
         <Advantages />
         <CEO />
         <Projects />
+        <AlbumSection />
         <Testimonials />
         <FAQ />
         <CTASection />
