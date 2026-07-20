@@ -35,65 +35,102 @@ type AlbumItem = {
 const ITEMS: AlbumItem[] = [
   {
     id: "1",
-    type: "photo",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1.webp",
-    alt: "Заливка фундамента, объект на ул. Строителей",
-    category: "Фундамент",
-    date: "03.2025",
-    width: 1200,
-    height: 900,
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Отделка",
+    date: "05.2025",
+    width: 900,
+    height: 1200,
   },
   {
     id: "2",
     type: "video",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2.webp",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/video-1.mp4",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2.mp4",
     alt: "Монтаж кровли, таймлапс",
-    category: "Кровля",
+    category: "Фундемент",
     date: "05.2025",
-    width: 1200,
-    height: 675,
+    width: 900,
+    height: 1200,
   },
   {
     id: "3",
-    type: "photo",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3.webp",
-    alt: "Черновая отделка, второй этаж",
-    category: "Отделка",
-    date: "07.2025",
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Архитектура",
+    date: "12.2025",
     width: 900,
     height: 1200,
   },
   {
     id: "4",
-    type: "photo",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4.webp",
-    alt: "Черновая отделка, второй этаж",
-    category: "Фундамент",
-    date: "07.2025",
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Фасад",
+    date: "12.2025",
     width: 900,
     height: 1200,
   },
   {
     id: "5",
-    type: "photo",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6.webp",
-    alt: "Черновая отделка, второй этаж",
-    category: "Кровля",
-    date: "07.2025",
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Фундемент",
+    date: "7.2025",
     width: 900,
     height: 1200,
   },
   {
     id: "6",
     type: "video",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4.webp",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/video-2.mp4",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6.mp4",
     alt: "Монтаж кровли, таймлапс",
-    category: "Отделка",
-    date: "05.2025",
-    width: 1200,
-    height: 675,
+    category: "Кровля",
+    date: "6.2025",
+    width: 900,
+    height: 1200,
+  },
+  {
+    id: "7",
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/7-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/7.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Стяжка",
+    date: "1.2024",
+    width: 900,
+    height: 1200,
+  },
+  {
+    id: "8",
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/8-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/8.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Стяжка",
+    date: "4.2024",
+    width: 900,
+    height: 1200,
+  },
+  {
+    id: "9",
+    type: "video",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/9-poster.jpg",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/9.mp4",
+    alt: "Монтаж кровли, таймлапс",
+    category: "Кровля",
+    date: "8.2024",
+    width: 900,
+    height: 1200,
   },
 
   // ...добавляйте остальные объекты по той же схеме
@@ -468,10 +505,13 @@ function VideoPlayer({
   const [current, setCurrent] = useState(0);
   const [muted, setMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [posterLoaded, setPosterLoaded] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (playing) {
+      setIsBuffering(true);
       videoRef.current?.play().catch(() => {});
     }
   }, [playing]);
@@ -532,20 +572,49 @@ function VideoPlayer({
     }, 2500);
   };
 
+  // Фиксированный размер блока по объявленным пропорциям видео —
+  // задаётся СРАЗУ, до загрузки постера/видео, поэтому при переключении
+  // между роликами (и пока превью ещё грузится) блок не "прыгает" и
+  // кнопка play не съезжает. Раньше size брался из реального img без
+  // явного контейнера — если у видео другие пропорции, чем указано в
+  // ITEMS, был layout shift и кнопка оказывалась не там, где кликали.
+  // height задан абсолютной величиной (vh) — она всегда конкретна,
+  // в отличие от "100%", который не резолвится, если у родителя нет
+  // явной высоты (именно из-за этого видео пропадало: height схлопывался в 0).
+  const boxStyle: React.CSSProperties = {
+    aspectRatio: `${item.width} / ${item.height}`,
+    height: "75vh",
+    maxHeight: "75vh",
+    width: "auto",
+    maxWidth: "100%",
+  };
+
   if (!playing) {
     return (
       <button
         onClick={onPlay}
-        className="relative block max-h-[75vh]"
+        className="relative block overflow-hidden rounded-lg"
+        style={boxStyle}
         aria-label="Воспроизвести видео"
       >
+        {!posterLoaded && (
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-[#0f2233]"
+            role="status"
+            aria-label="Загрузка превью"
+          >
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]" />
+          </div>
+        )}
         <Image
           src={item.src}
           alt={item.alt}
-          width={item.width}
-          height={item.height}
-          sizes="100vw"
-          className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain"
+          fill
+          sizes="(max-width: 640px) 90vw, 70vh"
+          className={`object-contain transition-opacity duration-200 ${
+            posterLoaded ? "opacity-100" : "opacity-0"
+          }`}
+          onLoad={() => setPosterLoaded(true)}
         />
         <span className="absolute inset-0 flex items-center justify-center">
           <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CFA779]/90 shadow-xl transition-transform duration-200 hover:scale-105">
@@ -560,26 +629,58 @@ function VideoPlayer({
 
   return (
     <div
-      className="group relative max-h-[75vh]"
+      className="group relative overflow-hidden rounded-lg"
+      style={boxStyle}
       onMouseMove={wakeControls}
       onTouchStart={wakeControls}
     >
+      {/* Постер-подложка под видео. Живёт, пока не начался реальный playback,
+          чтобы не было пустого/чёрного кадра во время буферизации — раньше
+          на это место полагался только нативный атрибут poster у <video>,
+          а он показывается с задержкой или не показывается вовсе. */}
+      {!isPlaying && (
+        <Image
+          src={item.src}
+          alt={item.alt}
+          fill
+          sizes="(max-width: 640px) 90vw, 70vh"
+          className="absolute inset-0 object-contain"
+        />
+      )}
+
+      {isBuffering && (
+        <div
+          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20"
+          role="status"
+          aria-label="Буферизация"
+        >
+          <span className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]" />
+        </div>
+      )}
       <video
         ref={videoRef}
         src={item.videoSrc}
         poster={item.src}
         playsInline
-        preload="none"
-        className="max-h-[75vh] w-auto max-w-full rounded-lg"
+        preload="metadata"
+        className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-150 ${
+          isPlaying ? "opacity-100" : "opacity-0"
+        }`}
         onClick={togglePlay}
-        onPlay={() => setIsPlaying(true)}
+        onPlay={() => {
+          setIsPlaying(true);
+          setIsBuffering(false);
+        }}
         onPause={() => setIsPlaying(false)}
+        onWaiting={() => setIsBuffering(true)}
+        onPlaying={() => setIsBuffering(false)}
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
       />
 
-      {/* Play-иконка по центру, когда на паузе */}
-      {!isPlaying && (
+      {/* Play-иконка по центру, когда на паузе. Скрыта во время буферизации —
+          иначе она накладывается на спиннер загрузки (баг: видно и то, и другое). */}
+      {!isPlaying && !isBuffering && (
         <button
           onClick={togglePlay}
           aria-label="Воспроизвести"
