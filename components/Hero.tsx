@@ -9,7 +9,10 @@ const STATS = [
 
 export default function Hero() {
   return (
-    <section id="top" className="relative overflow-hidden bg-navy-800 pb-16 pt-28 sm:pb-24 sm:pt-36">
+    <section
+      id="top"
+      className="relative overflow-hidden bg-navy-800 pb-16 pt-28 sm:pb-24 sm:pt-36"
+    >
       <HeroVideoBackground
         poster="/images/hero-poster.jpg"
         webm="/video/hero-construction.webm"
@@ -22,7 +25,8 @@ export default function Hero() {
 
       <div className="container-wrap relative">
         <p className="eyebrow text-sand-300">
-          <span className="h-px w-6 bg-sand-300" /> Строительная компания полного цикла
+          <span className="h-px w-6 bg-sand-300" /> Строительная компания
+          полного цикла
         </p>
 
         <h1 className="mt-5 max-w-3xl font-display text-[34px] font-semibold leading-[1.12] text-white sm:text-5xl lg:text-[56px]">
@@ -31,15 +35,16 @@ export default function Hero() {
         </h1>
 
         <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-mist-100/85 sm:text-base">
-          Жилые дома, коммерческие и промышленные объекты. Проектируем под задачу заказчика,
-          строим собственными бригадами, фиксируем стоимость в договоре и сдаём объект в срок.
+          Жилые дома, коммерческие и промышленные объекты. Проектируем под
+          задачу заказчика, строим собственными бригадами, фиксируем стоимость в
+          договоре и сдаём объект в срок.
         </p>
 
         <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-          <a href="#contacts" className="btn-primary">
+          <a href="#contacts" className="btn-primary !rounded-xl ">
             Рассчитать стоимость проекта
           </a>
-          <a href="#objects" className="btn-outline-light">
+          <a href="#objects" className="btn-outline-light !rounded-xl ">
             Смотреть объекты
           </a>
         </div>
@@ -52,7 +57,9 @@ export default function Hero() {
                 {s.value}
                 <span className="text-sand">{s.suffix}</span>
               </dd>
-              <p className="mt-1.5 text-[13px] leading-snug text-mist-100/70">{s.label}</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-mist-100/70">
+                {s.label}
+              </p>
             </div>
           ))}
         </dl>

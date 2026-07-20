@@ -93,7 +93,7 @@ export default function Projects() {
           {PROJECTS.map((project) => (
             <article
               key={project.name}
-              className="group overflow-hidden rounded-sm border border-navy-100 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md hover:shadow-navy-900/[0.06]"
+              className="group overflow-hidden rounded-xl border border-navy-100 bg-white shadow-sm transition-shadow duration-300 hover:shadow-md hover:shadow-navy-900/[0.06]"
             >
               <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-gradient-to-br from-navy-100 via-mist-100 to-navy-50">
                 {project.image ? (

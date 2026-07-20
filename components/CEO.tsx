@@ -62,7 +62,7 @@ export default function CEO() {
             ))}
           </div>
 
-          <a href="#contacts" className="btn-outline mt-9">
+          <a href="#contacts" className="btn-outline mt-9 !rounded-xl">
             Записаться на встречу с директором
           </a>
         </div>

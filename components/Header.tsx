@@ -85,7 +85,7 @@ export default function Header() {
             +7 700 123-45-67
           </a>
 
-          <a href="#contacts" className="btn-primary !py-3">
+          <a href="#contacts" className="btn-primary !py-3  !rounded-xl ">
             Обсудить проект
           </a>
         </div>

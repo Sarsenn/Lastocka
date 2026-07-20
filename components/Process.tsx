@@ -65,11 +65,11 @@ export default function Process() {
           Пять этапов от заявки до сдачи ключей
         </h2>
 
-        <ol className="mt-10 grid grid-cols-1 gap-6 sm:mt-14 sm:grid-cols-2 lg:grid-cols-6">
+        <ol className="mt-10 grid grid-cols-1 gap-6 sm:mt-14 sm:grid-cols-2 lg:grid-cols-6 ">
           {STEPS.map((s, i) => (
             <motion.li
               key={s.n}
-              className={`relative rounded-sm border border-navy-100 bg-white p-7 sm:p-8 lg:col-span-2 lg:p-9 ${LG_COL_START[i] ?? ""}`}
+              className={`relative rounded-xl border border-navy-100 bg-white p-7 sm:p-8 lg:col-span-2 lg:p-9  ${LG_COL_START[i] ?? ""}`}
               initial={{ opacity: 0, x: s.from.x, y: s.from.y }}
               whileInView={{ opacity: 1, x: 0, y: 0 }}
               viewport={{ once: true, amount: 0.4 }}
@@ -79,7 +79,7 @@ export default function Process() {
                 ease: [0.22, 1, 0.36, 1],
               }}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between ">
                 <span className="flex h-12 w-12 items-center justify-center rounded-full bg-navy-800 lg:h-14 lg:w-14">
                   <s.Icon
                     className="h-5 w-5 text-sand lg:h-6 lg:w-6"

@@ -47,7 +47,7 @@ const ITEMS: AlbumItem[] = [
     id: "2",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2.webp",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/video.mp4",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/video-1.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "05.2025",
@@ -69,7 +69,7 @@ const ITEMS: AlbumItem[] = [
     type: "photo",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4.webp",
     alt: "Черновая отделка, второй этаж",
-    category: "Отделка",
+    category: "Фундамент",
     date: "07.2025",
     width: 900,
     height: 1200,
@@ -77,7 +77,7 @@ const ITEMS: AlbumItem[] = [
   {
     id: "5",
     type: "photo",
-    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5.webp",
+    src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6.webp",
     alt: "Черновая отделка, второй этаж",
     category: "Кровля",
     date: "07.2025",
@@ -88,13 +88,14 @@ const ITEMS: AlbumItem[] = [
     id: "6",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4.webp",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/video2.mp4",
+    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/video-2.mp4",
     alt: "Монтаж кровли, таймлапс",
-    category: "Фундамент",
+    category: "Отделка",
     date: "05.2025",
     width: 1200,
     height: 675,
   },
+
   // ...добавляйте остальные объекты по той же схеме
 ];
 
@@ -124,7 +125,7 @@ export default function AlbumSection() {
           <span className="text-xs font-medium uppercase tracking-[0.2em] text-[#CFA779]">
             Наши объекты
           </span>
-          <h2 className="mt-3 text-2xl font-semibold text-[#ffffff] sm:text-4xl">
+          <h2 className="mt-3 text-2xl font-semibold text-[#CFCFEA] sm:text-4xl">
             Фото и видео со стройплощадок
           </h2>
         </div>
@@ -223,6 +224,7 @@ function AlbumCard({
   // длинная сетка не «доезжала» аним. долгие секунды
   const delay = Math.min(index % 8, 7) * 60;
   const { ref, visible } = useReveal<HTMLButtonElement>(delay);
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <button
@@ -233,13 +235,21 @@ function AlbumCard({
       }`}
       style={{ aspectRatio: `${item.width} / ${item.height}` }}
     >
+      {/* Skeleton-заглушка, пока картинка реально не загрузилась */}
+      {!loaded && (
+        <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-[#1c3a56] to-[#0f2233]" />
+      )}
+
       <Image
         src={item.src}
         alt={item.alt}
         fill
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-        className="object-cover transition-transform duration-300 group-active:scale-105 sm:group-hover:scale-105"
+        className={`object-cover transition-all duration-500 group-active:scale-105 sm:group-hover:scale-105 ${
+          loaded ? "opacity-100 blur-0" : "opacity-0 blur-sm"
+        }`}
         loading="lazy"
+        onLoad={() => setLoaded(true)}
       />
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/0 to-black/0" />
@@ -370,15 +380,7 @@ function Lightbox({
           }`}
         >
           {item.type === "photo" ? (
-            <Image
-              src={item.src}
-              alt={item.alt}
-              width={item.width}
-              height={item.height}
-              sizes="100vw"
-              className="max-h-[75vh] w-auto max-w-full rounded-lg object-contain"
-              priority
-            />
+            <LightboxPhoto item={item} />
           ) : (
             <VideoPlayer
               item={item}
@@ -407,6 +409,35 @@ function Lightbox({
           />
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Большое фото в лайтбоксе со спиннером, пока не догрузилось. */
+function LightboxPhoto({ item }: { item: AlbumItem }) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="relative flex items-center justify-center">
+      {!loaded && (
+        <div
+          className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]"
+          role="status"
+          aria-label="Загрузка"
+        />
+      )}
+      <Image
+        src={item.src}
+        alt={item.alt}
+        width={item.width}
+        height={item.height}
+        sizes="100vw"
+        className={`max-h-[75vh] w-auto max-w-full rounded-lg object-contain transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "absolute opacity-0"
+        }`}
+        priority
+        onLoad={() => setLoaded(true)}
+      />
     </div>
   );
 }
