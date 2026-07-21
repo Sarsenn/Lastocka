@@ -481,7 +481,6 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
   );
 }
 
-
 /**
  * Видеоплеер на Plyr (https://github.com/sampotts/plyr) — вместо самописного
  * плеера. Buffering-спиннер, постер, play/pause-иконка, прогресс-бар,
@@ -496,6 +495,12 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
 function VideoPlayer({ item }: { item: AlbumItem }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // ready — Plyr успешно инициализирован. failed — не удалось загрузить/
+  // инициализировать (например чанк plyr не догрузился на мобильном
+  // интернете, или пакет не установлен). Без этого различия при сбое
+  // просто ничего не показывалось: ни спиннера, ни кнопки, ни контролов.
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let player: import("plyr").default | null = null;
@@ -504,23 +509,30 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
     // Динамический импорт: plyr трогает window/document при инициализации,
     // поэтому грузим его только в браузере и только когда видео реально
     // показано (а не при каждом рендере лайтбокса).
-    import("plyr").then(({ default: Plyr }) => {
-      if (cancelled || !videoRef.current) return;
-      player = new Plyr(videoRef.current, {
-        controls: [
-          "play-large",
-          "play",
-          "progress",
-          "current-time",
-          "duration",
-          "mute",
-          "volume",
-          "fullscreen",
-        ],
-        resetOnEnd: true,
-        clickToPlay: true,
+    import("plyr")
+      .then(({ default: Plyr }) => {
+        if (cancelled || !videoRef.current) return;
+        player = new Plyr(videoRef.current, {
+          controls: [
+            "play-large",
+            "play",
+            "progress",
+            "current-time",
+            "duration",
+            "mute",
+            "volume",
+            "fullscreen",
+          ],
+          resetOnEnd: true,
+          clickToPlay: true,
+        });
+        setReady(true);
+      })
+      .catch(() => {
+        // Fallback: не удалось загрузить Plyr — включаем нативные контролы
+        // браузера, чтобы видео всё равно можно было посмотреть.
+        if (!cancelled) setFailed(true);
       });
-    });
 
     return () => {
       cancelled = true;
@@ -544,7 +556,7 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
   return (
     <div
       ref={containerRef}
-      className="overflow-hidden rounded-lg [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr__video-wrapper]:h-full [&_.plyr__video-wrapper]:w-full [&_video]:h-full [&_video]:w-full [&_video]:object-contain"
+      className="relative overflow-hidden rounded-lg [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr__video-wrapper]:h-full [&_.plyr__video-wrapper]:w-full [&_video]:h-full [&_video]:w-full [&_video]:object-contain"
       style={{
         ...plyrVars,
         aspectRatio: `${item.width} / ${item.height}`,
@@ -554,7 +566,22 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
         maxWidth: "100%",
       }}
     >
-      <video ref={videoRef} poster={item.src} playsInline preload="metadata">
+      {!ready && !failed && (
+        <div
+          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/20"
+          role="status"
+          aria-label="Загрузка плеера"
+        >
+          <span className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]" />
+        </div>
+      )}
+      <video
+        ref={videoRef}
+        poster={item.src}
+        playsInline
+        preload="metadata"
+        controls={failed}
+      >
         <source src={item.videoSrc} type="video/mp4" />
       </video>
     </div>

@@ -53,6 +53,8 @@ export default function RootLayout({
   return (
     <html lang="ru" className={`${unbounded.variable} ${manrope.variable}`}>
       <body>{children}</body>
+      <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+      <script>eruda.init();</script>
     </html>
   );
 }
