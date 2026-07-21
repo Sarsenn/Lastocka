@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Unbounded, Manrope } from "next/font/google";
 import "./globals.css";
-
-import ErudaDebug from "@/components/ErudaDebug";
+import "plyr/dist/plyr.css";
+import ErudaDebug from "../components/ErudaDebug";
 
 const unbounded = Unbounded({
   subsets: ["latin", "cyrillic"],

@@ -2,7 +2,22 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import "plyr/dist/plyr.css";
+// ВАЖНО: "plyr/dist/plyr.css" НЕЛЬЗЯ импортировать здесь.
+// Next.js разрешает импорт обычного (не *.module.css) CSS только в корневом
+// файле — app/layout.tsx (App Router) или pages/_app.tsx (Pages Router).
+// Импорт прямо в этом компоненте валит сборку на Vercel, из-за чего
+// на проде может оставаться СТАРЫЙ успешный деплой без всех правок ниже.
+//
+// Добавьте одну из строк в самый верх вашего корневого файла:
+//   app/layout.tsx:  import "plyr/dist/plyr.css";
+//   pages/_app.tsx:  import "plyr/dist/plyr.css";
+//
+// Если после этого TypeScript всё ещё ругается "Cannot find module or type
+// declarations for side-effect import of 'plyr/dist/plyr.css'" — создайте
+// файл types/css.d.ts (рядом с tsconfig.json) с содержимым:
+//   declare module "*.css";
+// и убедитесь, что tsconfig.json его подхватывает (обычно достаточно того,
+// что файл лежит в корне проекта — include там уже "**/*.ts" по умолчанию).
 
 /**
  * Секция «Альбом объектов» — сетка фото/видео + лайтбокс + свой видеоплеер.
@@ -471,7 +486,7 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
         width={item.width}
         height={item.height}
         sizes="100vw"
-        className={`max-h-[75vh] w-auto max-w-full rounded-lg object-contain transition-opacity duration-300 ${
+        className={`max-h-[75dvh] w-auto max-w-full rounded-lg object-contain transition-opacity duration-300 ${
           loaded ? "opacity-100" : "absolute opacity-0"
         }`}
         priority
@@ -556,16 +571,32 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
   return (
     <div
       ref={containerRef}
-      className="relative overflow-hidden rounded-lg [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr__video-wrapper]:h-full [&_.plyr__video-wrapper]:w-full [&_video]:h-full [&_video]:w-full [&_video]:object-contain"
+      className="video-player-box relative overflow-hidden rounded-lg"
       style={{
         ...plyrVars,
         aspectRatio: `${item.width} / ${item.height}`,
-        height: "75vh",
-        maxHeight: "75vh",
+        height: "75dvh",
+        maxHeight: "75dvh",
         width: "auto",
         maxWidth: "100%",
       }}
     >
+      {/* Обычный CSS вместо Tailwind arbitrary-селекторов [&_.plyr] — тот
+          синтаксис требует Tailwind 3.2+ и молча не применяется на более
+          старых версиях (без единой ошибки в консоли), из-за чего Plyr
+          и <video> внутри могли оставаться нулевой высоты. */}
+      <style jsx>{`
+        .video-player-box :global(.plyr),
+        .video-player-box :global(.plyr__video-wrapper) {
+          height: 100%;
+          width: 100%;
+        }
+        .video-player-box :global(video) {
+          height: 100%;
+          width: 100%;
+          object-fit: contain;
+        }
+      `}</style>
       {!ready && !failed && (
         <div
           className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/20"
