@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import "plyr/dist/plyr.css";
 
 /**
  * Секция «Альбом объектов» — сетка фото/видео + лайтбокс + свой видеоплеер.
@@ -328,7 +329,6 @@ function Lightbox({
 }) {
   const item = items[index];
   const touchStartX = useRef<number | null>(null);
-  const [playingVideo, setPlayingVideo] = useState(false);
 
   // Анимация появления/закрытия: монтируем сразу, но включаем
   // "visible" через кадр — CSS transition отрабатывает переход
@@ -346,7 +346,6 @@ function Lightbox({
   const goTo = useCallback(
     (next: number) => {
       const clamped = (next + items.length) % items.length;
-      setPlayingVideo(false);
       onIndexChange(clamped);
     },
     [items.length, onIndexChange],
@@ -419,11 +418,7 @@ function Lightbox({
           {item.type === "photo" ? (
             <LightboxPhoto item={item} />
           ) : (
-            <VideoPlayer
-              item={item}
-              playing={playingVideo}
-              onPlay={() => setPlayingVideo(true)}
-            />
+            <VideoPlayer item={item} />
           )}
         </div>
 
@@ -479,290 +474,82 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
   );
 }
 
+
 /**
- * Свой видеоплеер — без сторонних библиотек.
- * Показывает постер + play-кнопку, после нажатия рендерит <video> со
- * своими контролами (прогресс-бар с перемоткой, время, звук, fullscreen).
+ * Видеоплеер на Plyr (https://github.com/sampotts/plyr) — вместо самописного
+ * плеера. Buffering-спиннер, постер, play/pause-иконка, прогресс-бар,
+ * fullscreen — всё это внутри Plyr уже обкатано на iOS Safari/Android Chrome
+ * и не завязано на наши собственные isPlaying/isBuffering стейты, которые
+ * раньше рассинхронизировались (гонки между событиями play/playing/waiting).
  *
- * Если позже понадобятся субтитры / выбор качества / скорость —
- * проще всего поставить Plyr (npm i plyr, ~25кб gzip) и подставить его
- * вместо этого компонента: он темизируется CSS-переменными
- * (--plyr-color-main: #CFA779; --plyr-video-background: #162E45; и т.д.)
+ * Установка: npm i plyr
+ * Тема цвета — через CSS-переменные на обёртке (см. plyrVars ниже), сам
+ * пакет плагинов/скинов менять не нужно.
  */
-function VideoPlayer({
-  item,
-  playing,
-  onPlay,
-}: {
-  item: AlbumItem;
-  playing: boolean;
-  onPlay: () => void;
-}) {
+function VideoPlayer({ item }: { item: AlbumItem }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); // 0..1
-  const [duration, setDuration] = useState(0);
-  const [current, setCurrent] = useState(0);
-  const [muted, setMuted] = useState(false);
-  const [showControls, setShowControls] = useState(true);
-  const [posterLoaded, setPosterLoaded] = useState(false);
-  const [isBuffering, setIsBuffering] = useState(false);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (playing) {
-      setIsBuffering(true);
-      videoRef.current?.play().catch(() => {});
-    }
-  }, [playing]);
+    let player: import("plyr").default | null = null;
+    let cancelled = false;
 
-  const togglePlay = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (v.paused) {
-      v.play();
-    } else {
-      v.pause();
-    }
-  };
+    // Динамический импорт: plyr трогает window/document при инициализации,
+    // поэтому грузим его только в браузере и только когда видео реально
+    // показано (а не при каждом рендере лайтбокса).
+    import("plyr").then(({ default: Plyr }) => {
+      if (cancelled || !videoRef.current) return;
+      player = new Plyr(videoRef.current, {
+        controls: [
+          "play-large",
+          "play",
+          "progress",
+          "current-time",
+          "duration",
+          "mute",
+          "volume",
+          "fullscreen",
+        ],
+        resetOnEnd: true,
+        clickToPlay: true,
+      });
+    });
 
-  const onTimeUpdate = () => {
-    const v = videoRef.current;
-    if (!v || !v.duration) return;
-    setCurrent(v.currentTime);
-    setProgress(v.currentTime / v.duration);
-  };
+    return () => {
+      cancelled = true;
+      player?.destroy();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]);
 
-  const seek = (
-    e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>,
-  ) => {
-    const v = videoRef.current;
-    const bar = e.currentTarget;
-    if (!v || !v.duration) return;
-    const rect = bar.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const ratio = Math.min(Math.max((clientX - rect.left) / rect.width, 0), 1);
-    v.currentTime = ratio * v.duration;
-  };
-
-  const toggleFullscreen = () => {
-    const v = videoRef.current;
-    if (!v) return;
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      v.requestFullscreen?.();
-    }
-  };
-
-  const formatTime = (s: number) => {
-    if (!isFinite(s)) return "0:00";
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60)
-      .toString()
-      .padStart(2, "0");
-    return `${m}:${sec}`;
-  };
-
-  const wakeControls = () => {
-    setShowControls(true);
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => {
-      if (isPlaying) setShowControls(false);
-    }, 2500);
-  };
-
-  // Фиксированный размер блока по объявленным пропорциям видео —
-  // задаётся СРАЗУ, до загрузки постера/видео, поэтому при переключении
-  // между роликами (и пока превью ещё грузится) блок не "прыгает" и
-  // кнопка play не съезжает. Раньше size брался из реального img без
-  // явного контейнера — если у видео другие пропорции, чем указано в
-  // ITEMS, был layout shift и кнопка оказывалась не там, где кликали.
-  // height задан абсолютной величиной (vh) — она всегда конкретна,
-  // в отличие от "100%", который не резолвится, если у родителя нет
-  // явной высоты (именно из-за этого видео пропадало: height схлопывался в 0).
-  const boxStyle: React.CSSProperties = {
-    aspectRatio: `${item.width} / ${item.height}`,
-    height: "75vh",
-    maxHeight: "75vh",
-    width: "auto",
-    maxWidth: "100%",
-  };
-
-  if (!playing) {
-    return (
-      <button
-        onClick={onPlay}
-        className="relative block overflow-hidden rounded-lg"
-        style={boxStyle}
-        aria-label="Воспроизвести видео"
-      >
-        {!posterLoaded && (
-          <div
-            className="absolute inset-0 flex items-center justify-center bg-[#0f2233]"
-            role="status"
-            aria-label="Загрузка превью"
-          >
-            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]" />
-          </div>
-        )}
-        <Image
-          src={item.src}
-          alt={item.alt}
-          fill
-          sizes="(max-width: 640px) 90vw, 70vh"
-          className={`object-contain transition-opacity duration-200 ${
-            posterLoaded ? "opacity-100" : "opacity-0"
-          }`}
-          onLoad={() => setPosterLoaded(true)}
-        />
-        <span className="absolute inset-0 flex items-center justify-center">
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CFA779]/90 shadow-xl transition-transform duration-200 hover:scale-105">
-            <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-[#162E45]">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-        </span>
-      </button>
-    );
-  }
+  // Цветовая тема Plyr под бренд — без переопределения его CSS-файла.
+  const plyrVars = {
+    "--plyr-color-main": "#CFA779",
+    "--plyr-video-background": "#162E45",
+    "--plyr-audio-controls-background": "#162E45",
+    "--plyr-menu-background": "#162E45",
+    "--plyr-menu-color": "#CFCFEA",
+    "--plyr-tooltip-background": "#162E45",
+    "--plyr-video-control-color": "#CFCFEA",
+    "--plyr-video-control-color-hover": "#162E45",
+  } as React.CSSProperties;
 
   return (
     <div
-      className="group relative overflow-hidden rounded-lg"
-      style={boxStyle}
-      onMouseMove={wakeControls}
-      onTouchStart={wakeControls}
+      ref={containerRef}
+      className="overflow-hidden rounded-lg [&_.plyr]:h-full [&_.plyr]:w-full [&_.plyr__video-wrapper]:h-full [&_.plyr__video-wrapper]:w-full [&_video]:h-full [&_video]:w-full [&_video]:object-contain"
+      style={{
+        ...plyrVars,
+        aspectRatio: `${item.width} / ${item.height}`,
+        height: "75vh",
+        maxHeight: "75vh",
+        width: "auto",
+        maxWidth: "100%",
+      }}
     >
-      {/* Постер-подложка под видео. Живёт, пока не начался реальный playback,
-          чтобы не было пустого/чёрного кадра во время буферизации — раньше
-          на это место полагался только нативный атрибут poster у <video>,
-          а он показывается с задержкой или не показывается вовсе. */}
-      {!isPlaying && (
-        <Image
-          src={item.src}
-          alt={item.alt}
-          fill
-          sizes="(max-width: 640px) 90vw, 70vh"
-          className="absolute inset-0 object-contain"
-        />
-      )}
-
-      {isBuffering && (
-        <div
-          className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/20"
-          role="status"
-          aria-label="Буферизация"
-        >
-          <span className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]" />
-        </div>
-      )}
-      <video
-        ref={videoRef}
-        src={item.videoSrc}
-        poster={item.src}
-        playsInline
-        preload="metadata"
-        className={`absolute inset-0 h-full w-full object-contain transition-opacity duration-150 ${
-          isPlaying ? "opacity-100" : "opacity-0"
-        }`}
-        onClick={togglePlay}
-        onPlay={() => {
-          setIsPlaying(true);
-          setIsBuffering(false);
-        }}
-        onPause={() => setIsPlaying(false)}
-        onWaiting={() => setIsBuffering(true)}
-        onPlaying={() => setIsBuffering(false)}
-        onTimeUpdate={onTimeUpdate}
-        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
-      />
-
-      {/* Play-иконка по центру, когда на паузе. Скрыта во время буферизации —
-          иначе она накладывается на спиннер загрузки (баг: видно и то, и другое). */}
-      {!isPlaying && !isBuffering && (
-        <button
-          onClick={togglePlay}
-          aria-label="Воспроизвести"
-          className="absolute inset-0 flex items-center justify-center"
-        >
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CFA779]/90 shadow-xl">
-            <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-[#162E45]">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-        </button>
-      )}
-
-      {/* Панель управления */}
-      <div
-        className={`absolute inset-x-0 bottom-0 flex flex-col gap-1.5 rounded-b-lg bg-gradient-to-t from-black/80 to-transparent px-3 pb-2 pt-6 transition-opacity duration-200 ${
-          showControls ? "opacity-100" : "opacity-0"
-        }`}
-      >
-        <div
-          className="h-3 flex cursor-pointer items-center"
-          onClick={seek}
-          onTouchMove={seek}
-        >
-          <div className="relative h-1 w-full rounded-full bg-[#CFCFEA]/25">
-            <div
-              className="absolute inset-y-0 left-0 rounded-full bg-[#CFA779]"
-              style={{ width: `${progress * 100}%` }}
-            />
-            <div
-              className="absolute top-1/2 h-3 w-3 -translate-y-1/2 -translate-x-1/2 rounded-full bg-[#CFA779] shadow"
-              style={{ left: `${progress * 100}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-[#CFCFEA]">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={togglePlay}
-              aria-label={isPlaying ? "Пауза" : "Воспроизвести"}
-            >
-              {isPlaying ? (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#CFCFEA]">
-                  <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#CFCFEA]">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              )}
-            </button>
-            <button
-              onClick={() => {
-                const v = videoRef.current;
-                if (!v) return;
-                v.muted = !v.muted;
-                setMuted(v.muted);
-              }}
-              aria-label={muted ? "Включить звук" : "Выключить звук"}
-            >
-              {muted ? (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#CFCFEA]">
-                  <path d="M16.5 12A4.5 4.5 0 0014 8v1.79l2.5 2.5c0-.1.02-.19.02-.29zM3 3.27l3.15 3.15L6 6.5v4H3v6h4l5 5v-6.73l4.25 4.25c-.67.5-1.42.9-2.25 1.11v2.06a8.94 8.94 0 003.69-1.55l1.58 1.58L21 20.72 4.27 4 3 3.27zM12 4L9.91 6.09 12 8.18V4z" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#CFCFEA]">
-                  <path d="M3 10v4h4l5 5V5L7 10H3zm13.5 2A4.5 4.5 0 0014 8v8a4.47 4.47 0 002.5-4z" />
-                </svg>
-              )}
-            </button>
-            <span className="text-xs tabular-nums text-[#CFCFEA]/80">
-              {formatTime(current)} / {formatTime(duration)}
-            </span>
-          </div>
-          <button onClick={toggleFullscreen} aria-label="Полный экран">
-            <svg viewBox="0 0 24 24" className="h-5 w-5 fill-[#CFCFEA]">
-              <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-            </svg>
-          </button>
-        </div>
-      </div>
+      <video ref={videoRef} poster={item.src} playsInline preload="metadata">
+        <source src={item.videoSrc} type="video/mp4" />
+      </video>
     </div>
   );
 }
