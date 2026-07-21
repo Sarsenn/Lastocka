@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Unbounded, Manrope } from "next/font/google";
 import "./globals.css";
 
@@ -52,9 +53,19 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className={`${unbounded.variable} ${manrope.variable}`}>
-      <body>{children}</body>
-      <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-      <script>eruda.init();</script>
+      <body>
+        {children}
+
+        {/* ВРЕМЕННО для отладки бага на мобильных — удалить после того,
+            как разберёмся с проблемой видео на iOS. */}
+        <Script
+          src="https://cdn.jsdelivr.net/npm/eruda"
+          strategy="afterInteractive"
+        />
+        <Script id="eruda-init" strategy="afterInteractive">
+          {`eruda.init();`}
+        </Script>
+      </body>
     </html>
   );
 }
