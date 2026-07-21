@@ -2,26 +2,42 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
+import dynamic from "next/dynamic";
+
+// Стили плеера Vidstack — обычный CSS, не CSS-модуль.
+// App Router (папка app/): можно импортировать прямо тут, ничего переносить не нужно.
+// Pages Router (папка pages/): Next.js разрешает импорт обычного CSS только в
+// корневом файле pages/_app.tsx — перенесите две строки ниже в самый верх
+// _app.tsx, иначе сборка на Vercel упадёт.
+import "@vidstack/react/player/styles/default/theme.css";
+import "@vidstack/react/player/styles/default/layouts/video.css";
 
 /**
- * Секция «Альбом объектов» — сетка фото/видео + лайтбокс + свой видеоплеер.
+ * Секция «Альбом объектов» — сетка фото/видео + лайтбокс + видеоплеер на Vidstack.
  * Цвета: фон #162E45, акцент #CFA779, вспомогательный #CFCFEA.
  *
- * Никаких сторонних пакетов не требуется (Plyr убран) — плеер написан на
- * нативном <video> + Pointer Events, поэтому ничего дополнительно
- * устанавливать/импортировать не нужно, компонент самодостаточен.
+ * Видеоплеер: npm i @vidstack/react@next (версия под тегом "latest" — ещё 0.x, старый API без MediaPlayer/MediaProvider)
+ * Готовый продакшн-плеер (буферизация, перемотка с превью, fullscreen,
+ * PiP, доступность, корректная работа на iOS/Android из коробки) вместо
+ * самописных контролов — меньше багов на разных мобильных браузерах.
+ * Тема цвета/шрифт — через CSS-переменные --video-*, см. videoThemeVars ниже,
+ * сам пакет и его CSS не трогаем.
+ * Плеер грузится динамически (next/dynamic, ssr:false) — его JS-чанк не
+ * попадает в основной бандл и не выполняется на сервере, а до его загрузки
+ * показывается свой скелетон-лоадер.
  *
- * Анимации — CSS-transition + IntersectionObserver, без внешних библиотек.
+ * Анимации сетки/лайтбокса — CSS-transition + IntersectionObserver, без
+ * дополнительных библиотек.
  *
  * Как подключить:
- * 1) Положить компонент в components/AlbumSection.tsx
- * 2) Заполнить массив ITEMS реальными путями (public/album/...) или URL
- * 3) <AlbumSection /> на странице
+ * 1) npm i @vidstack/react@next  <- ОБЯЗАТЕЛЬНО с @next, иначе поставится старая 0.x без нужных экспортов
+ * 2) Положить компонент в components/AlbumSection.tsx
+ * 3) Заполнить массив ITEMS реальными путями (public/album/...) или URL
+ * 4) <AlbumSection /> на странице
  *
  * Для видео: лёгкий постер (jpg/webp) + сжатый mp4 (H.264, до ~6-8 Мбит/с),
- * либо Cloudflare Stream / Mux — тогда вместо <video> в VideoPlayer нужно
- * подставить их embed. preload="metadata" — грузятся только метаданные
- * (длительность/превью-кадр), сам файл — только после нажатия play.
+ * либо Cloudflare Stream / Mux — тогда вместо src в MediaPlayer нужно
+ * подставить их источник (Vidstack поддерживает HLS/DASH из коробки).
  */
 
 type AlbumItem = {
@@ -363,6 +379,12 @@ function Lightbox({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") handleClose();
+      // Пока фокус внутри видеоплеера — стрелки принадлежат его перемотке,
+      // а не переключению слайдов лайтбокса.
+      const withinPlayer = (e.target as HTMLElement | null)?.closest?.(
+        "[data-media-player]",
+      );
+      if (withinPlayer) return;
       if (e.key === "ArrowRight") goTo(index + 1);
       if (e.key === "ArrowLeft") goTo(index - 1);
     };
@@ -488,183 +510,75 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
   );
 }
 
-function formatTime(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
-  const m = Math.floor(seconds / 60);
-  const s = Math.floor(seconds % 60);
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
 
-// iOS Safari умеет разворачивать на весь экран только сам <video>,
-// у контейнеров (div) fullscreen API не поддерживается.
-type IOSVideoElement = HTMLVideoElement & {
-  webkitEnterFullscreen?: () => void;
+// Цветовая тема плеера через CSS-переменные Vidstack (--video-*) —
+// поверх ancestor-элемента, без правки чужого CSS-файла. --video-font-family:
+// inherit — чтобы плеер подхватывал тот же шрифт, что и остальной сайт,
+// а не свой дефолтный sans-serif.
+const videoThemeVars = {
+  "--video-brand": "#CFA779",
+  "--video-bg": "#0b1826",
+  "--video-controls-color": "#CFCFEA",
+  "--video-focus-ring-color": "#CFA779",
+  "--video-border-radius": "0.5rem",
+  "--video-font-family": "inherit",
 };
 
-/**
- * Полностью самописный видеоплеер на нативном <video> — никаких сторонних
- * пакетов. Свой прогресс-бар (перетаскивание мышью/пальцем через Pointer
- * Events — единый код для десктопа и мобильных), большая play-кнопка по
- * центру, автоскрытие панели во время воспроизведения, спиннер буферизации,
- * отдельная ветка для fullscreen на iOS Safari.
- */
-function VideoPlayer({ item }: { item: AlbumItem }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const [ready, setReady] = useState(false); // метаданные загружены
-  const [playing, setPlaying] = useState(false);
-  const [buffering, setBuffering] = useState(false);
-  const [current, setCurrent] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [buffered, setBuffered] = useState(0);
-  const [muted, setMuted] = useState(false);
-  const [volume, setVolume] = useState(1);
-  const [showControls, setShowControls] = useState(true);
-  const [scrubbing, setScrubbing] = useState(false);
-
-  const scheduleHide = useCallback(() => {
-    if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setShowControls(false), 2600);
-  }, []);
-
-  const wake = useCallback(() => {
-    setShowControls(true);
-    if (playing) scheduleHide();
-  }, [playing, scheduleHide]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const onLoadedMeta = () => {
-      setReady(true);
-      setDuration(video.duration || 0);
-    };
-    const onTimeUpdate = () => {
-      setCurrent(video.currentTime);
-      if (video.buffered.length) {
-        setBuffered(video.buffered.end(video.buffered.length - 1));
-      }
-    };
-    const onPlay = () => {
-      setPlaying(true);
-      scheduleHide();
-    };
-    const onPause = () => {
-      setPlaying(false);
-      setBuffering(false);
-      setShowControls(true);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
-    const onWaiting = () => setBuffering(true);
-    const onPlaying = () => setBuffering(false);
-    const onEnded = () => {
-      setPlaying(false);
-      setBuffering(false);
-      setShowControls(true);
-    };
-
-    video.addEventListener("loadedmetadata", onLoadedMeta);
-    video.addEventListener("timeupdate", onTimeUpdate);
-    video.addEventListener("play", onPlay);
-    video.addEventListener("pause", onPause);
-    video.addEventListener("waiting", onWaiting);
-    video.addEventListener("playing", onPlaying);
-    video.addEventListener("ended", onEnded);
-
-    return () => {
-      video.removeEventListener("loadedmetadata", onLoadedMeta);
-      video.removeEventListener("timeupdate", onTimeUpdate);
-      video.removeEventListener("play", onPlay);
-      video.removeEventListener("pause", onPause);
-      video.removeEventListener("waiting", onWaiting);
-      video.removeEventListener("playing", onPlaying);
-      video.removeEventListener("ended", onEnded);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-    };
-  }, [scheduleHide]);
-
-  const togglePlay = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    if (video.paused) video.play().catch(() => {});
-    else video.pause();
-  };
-
-  const toggleMute = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    video.muted = !video.muted;
-    setMuted(video.muted);
-  };
-
-  const onVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const video = videoRef.current;
-    if (!video) return;
-    const v = Number(e.target.value);
-    video.volume = v;
-    video.muted = v === 0;
-    setVolume(v);
-    setMuted(v === 0);
-  };
-
-  const seekToClientX = useCallback(
-    (clientX: number) => {
-      const bar = progressRef.current;
-      const video = videoRef.current;
-      if (!bar || !video || !duration) return;
-      const rect = bar.getBoundingClientRect();
-      const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-      video.currentTime = ratio * duration;
-      setCurrent(ratio * duration);
-    },
-    [duration],
+/** Скелетон-заглушка, пока грузится JS-чанк плеера (первое открытие видео за сессию). */
+function VideoPlayerSkeleton() {
+  return (
+    <div className="flex h-[75dvh] max-h-[75dvh] w-[50vw] min-w-[240px] max-w-full items-center justify-center rounded-lg bg-[#0b1826]">
+      <span
+        className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]"
+        role="status"
+        aria-label="Загрузка плеера"
+      />
+    </div>
   );
+}
 
-  const onProgressPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    setScrubbing(true);
-    seekToClientX(e.clientX);
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onProgressPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (scrubbing) seekToClientX(e.clientX);
-  };
-  const onProgressPointerUp = () => setScrubbing(false);
+/**
+ * Видеоплеер на Vidstack (https://vidstack.io) вместо самописных контролов —
+ * готовое, обкатанное решение для буферизации, перемотки, fullscreen (в т.ч.
+ * на iOS Safari) и доступности. Сам плеер и его лейаут подгружаются через
+ * next/dynamic с ssr:false одним куском: код Vidstack не попадает в основной
+ * бандл и не пытается выполниться на сервере (там нет DOM/customElements),
+ * а пока чанк грузится — показывается VideoPlayerSkeleton.
+ */
+const VidstackVideoPlayer = dynamic<{ item: AlbumItem }>(
+  async () => {
+    const [{ MediaPlayer, MediaProvider }, { DefaultVideoLayout, defaultLayoutIcons }] =
+      await Promise.all([
+        import("@vidstack/react"),
+        import("@vidstack/react/player/layouts/default"),
+      ]);
 
-  const enterFullscreen = () => {
-    const video = videoRef.current as IOSVideoElement | null;
-    const container = containerRef.current;
-    if (!video) return;
-    if (typeof video.webkitEnterFullscreen === "function") {
-      video.webkitEnterFullscreen();
-      return;
+    function Player({ item }: { item: AlbumItem }) {
+      return (
+        <MediaPlayer
+          title={item.alt}
+          src={item.videoSrc}
+          poster={item.src}
+          playsInline
+          aspectRatio={`${item.width}/${item.height}`}
+          className="h-full w-full overflow-hidden rounded-lg"
+          style={videoThemeVars}
+        >
+          <MediaProvider />
+          <DefaultVideoLayout icons={defaultLayoutIcons} colorScheme="dark" />
+        </MediaPlayer>
+      );
     }
-    container?.requestFullscreen?.().catch(() => {});
-  };
 
-  const onContainerKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === " " || e.key === "k") {
-      e.preventDefault();
-      togglePlay();
-    }
-  };
+    return Player;
+  },
+  { ssr: false, loading: () => <VideoPlayerSkeleton /> },
+);
 
-  const progressPct = duration ? (current / duration) * 100 : 0;
-  const bufferedPct = duration ? (buffered / duration) * 100 : 0;
-
+function VideoPlayer({ item }: { item: AlbumItem }) {
   return (
     <div
-      ref={containerRef}
-      role="group"
-      aria-label="Видеоплеер"
-      tabIndex={0}
-      onKeyDown={onContainerKeyDown}
-      onPointerMove={wake}
-      onPointerDown={wake}
-      className="relative select-none overflow-hidden rounded-lg bg-black outline-none"
+      className="relative overflow-hidden rounded-lg"
       style={{
         aspectRatio: `${item.width} / ${item.height}`,
         height: "75dvh",
@@ -673,136 +587,7 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
         maxWidth: "100%",
       }}
     >
-      <video
-        ref={videoRef}
-        poster={item.src}
-        playsInline
-        preload="metadata"
-        className="h-full w-full object-contain"
-        onClick={togglePlay}
-      >
-        <source src={item.videoSrc} type="video/mp4" />
-      </video>
-
-      {/* Спиннер: метаданные ещё не готовы, либо идёт буферизация на паузе воспроизведения */}
-      {(!ready || buffering) && (
-        <div
-          className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/20"
-          role="status"
-          aria-label="Загрузка видео"
-        >
-          <span className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]" />
-        </div>
-      )}
-
-      {/* Большая play-кнопка по центру, когда видео на паузе */}
-      {ready && !playing && !buffering && (
-        <button
-          onClick={togglePlay}
-          aria-label="Воспроизвести"
-          className="absolute inset-0 z-20 flex items-center justify-center"
-        >
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CFA779]/90 shadow-lg transition-transform duration-200 hover:scale-105 active:scale-95">
-            <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-[#162E45]">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-        </button>
-      )}
-
-      {/* Нижняя панель управления — автоскрытие во время воспроизведения */}
-      <div
-        className={`absolute inset-x-0 bottom-0 z-20 flex flex-col gap-1.5 bg-gradient-to-t from-[#0b1826]/90 to-transparent px-3 pb-2 pt-8 transition-opacity duration-300 ${
-          showControls ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-      >
-        <div
-          ref={progressRef}
-          className="group relative h-4 w-full cursor-pointer touch-none"
-          onPointerDown={onProgressPointerDown}
-          onPointerMove={onProgressPointerMove}
-          onPointerUp={onProgressPointerUp}
-          onPointerCancel={onProgressPointerUp}
-          role="slider"
-          aria-label="Перемотка"
-          aria-valuemin={0}
-          aria-valuemax={Math.round(duration)}
-          aria-valuenow={Math.round(current)}
-        >
-          <span className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-white/20" />
-          <span
-            className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#CFCFEA]/40"
-            style={{ width: `${bufferedPct}%` }}
-          />
-          <span
-            className="absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#CFA779]"
-            style={{ width: `${progressPct}%` }}
-          />
-          <span
-            className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#CFA779] shadow transition-transform duration-150 group-active:scale-125"
-            style={{ left: `${progressPct}%` }}
-          />
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-3">
-          <button
-            onClick={togglePlay}
-            aria-label={playing ? "Пауза" : "Воспроизвести"}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#CFCFEA] transition-colors hover:bg-white/10 active:bg-white/15"
-          >
-            {playing ? (
-              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-                <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-              </svg>
-            ) : (
-              <svg viewBox="0 0 24 24" className="ml-0.5 h-5 w-5 fill-current">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            )}
-          </button>
-
-          <span className="shrink-0 text-xs tabular-nums text-[#CFCFEA]">
-            {formatTime(current)} / {formatTime(duration)}
-          </span>
-
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
-            <button
-              onClick={toggleMute}
-              aria-label={muted ? "Включить звук" : "Выключить звук"}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#CFCFEA] transition-colors hover:bg-white/10 active:bg-white/15"
-            >
-              {muted || volume === 0 ? (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-                  <path d="M16.5 12a4.5 4.5 0 00-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.42.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.943 8.943 0 0021 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a8.99 8.99 0 003.69-1.81L18.73 21 20 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z" />
-                </svg>
-              ) : (
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z" />
-                </svg>
-              )}
-            </button>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={muted ? 0 : volume}
-              onChange={onVolumeChange}
-              aria-label="Громкость"
-              className="hidden h-1 w-16 accent-[#CFA779] sm:block"
-            />
-            <button
-              onClick={enterFullscreen}
-              aria-label="Развернуть на весь экран"
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#CFCFEA] transition-colors hover:bg-white/10 active:bg-white/15"
-            >
-              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current">
-                <path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </div>
+      <VidstackVideoPlayer item={item} />
     </div>
   );
 }
