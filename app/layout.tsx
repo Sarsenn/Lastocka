@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Unbounded, Manrope } from "next/font/google";
 import "./globals.css";
+
+import ErudaDebug from "@/components/ErudaDebug";
 
 const unbounded = Unbounded({
   subsets: ["latin", "cyrillic"],
@@ -58,13 +59,7 @@ export default function RootLayout({
 
         {/* ВРЕМЕННО для отладки бага на мобильных — удалить после того,
             как разберёмся с проблемой видео на iOS. */}
-        <Script
-          src="https://cdn.jsdelivr.net/npm/eruda"
-          strategy="afterInteractive"
-        />
-        <Script id="eruda-init" strategy="afterInteractive">
-          {`eruda.init();`}
-        </Script>
+        <ErudaDebug />
       </body>
     </html>
   );
