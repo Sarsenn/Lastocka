@@ -379,13 +379,20 @@ function Lightbox({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col overflow-x-hidden bg-[#0b1826]/97 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`fixed inset-0 z-50 flex flex-col overflow-x-hidden transition-opacity duration-200 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       style={{ touchAction: "pan-y", overscrollBehavior: "contain" }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {/* Фон + блюр вынесены в отдельный слой позади контента. Раньше
+          backdrop-blur висел прямо на предке <video> — на iOS Safari это
+          известный баг: видео рендерится в отдельном аппаратном слое,
+          который ломается под backdrop-filter на родителе (видео просто
+          не показывается, остаётся только блюр). */}
+      <div className="absolute inset-0 -z-10 bg-[#0b1826]/97 backdrop-blur-sm" />
+
       <div className="flex items-center justify-between px-4 py-3 sm:px-6">
         <span className="text-sm text-[#CFCFEA]">
           {item.category}
