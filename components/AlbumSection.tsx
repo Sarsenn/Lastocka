@@ -15,12 +15,11 @@ import Image from "next/image";
  * решает эту проблему за нас и бесплатно.
  *
  * Как подключить видео:
- * 1) Загрузить видео на vk.com (можно с приватностью "не в поиске")
- * 2) На странице видео → "Поделиться" → "Код для вставки"
- * 3) Скопировать значение src из полученного <iframe src="https://vk.com/video_ext.php?...">
- * 4) Вставить обычную ссылку на клип в поле vkUrl у нужного объекта в массиве ITEMS ниже
- *    (например https://vkvideo.ru/clip-240409043_456239034) — embed-URL для
- *    iframe собирается из неё автоматически функцией vkClipToEmbedSrc()
+ * 1) На странице клипа в VK → "Поделиться" → "Код для вставки"
+ * 2) Скопировать значение src из полученного
+ *    <iframe src="https://vk.com/clip_ext.php?oid=...&id=...&autoplay=1">
+ * 3) Вставить эту готовую ссылку целиком в поле vkUrl нужного объекта
+ *    в массиве ITEMS ниже — парсить/собирать её самим не нужно
  *
  * Анимации сетки/лайтбокса — CSS-transition + IntersectionObserver, без
  * дополнительных библиотек.
@@ -30,7 +29,7 @@ type AlbumItem = {
   id: string;
   type: "photo" | "video";
   src: string; // фото: путь к изображению; видео: путь к постеру (превью)
-  vkUrl?: string; // обязателен для type === "video" — обычная ссылка вида https://vkvideo.ru/clip-OID_ID
+  vkUrl?: string; // обязателен для type === "video" — готовый src вида https://vk.com/clip_ext.php?oid=...&id=...&autoplay=1
   alt: string;
   category: string; // напр. "Фундамент", "Кровля", "Отделка"
   date?: string; // напр. "03.2025"
@@ -43,7 +42,7 @@ const ITEMS: AlbumItem[] = [
     id: "1",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239029",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239019&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Отделка",
     date: "05.2025",
@@ -54,7 +53,7 @@ const ITEMS: AlbumItem[] = [
     id: "2",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239028",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239020&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Фундемент",
     date: "05.2025",
@@ -65,7 +64,7 @@ const ITEMS: AlbumItem[] = [
     id: "3",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239031",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239021&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Архитектура",
     date: "12.2025",
@@ -76,7 +75,7 @@ const ITEMS: AlbumItem[] = [
     id: "4",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239032",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239022&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Фасад",
     date: "12.2025",
@@ -87,7 +86,7 @@ const ITEMS: AlbumItem[] = [
     id: "5",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239023&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Фундемент",
     date: "7.2025",
@@ -98,7 +97,7 @@ const ITEMS: AlbumItem[] = [
     id: "6",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239034",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239024&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "6.2025",
@@ -109,7 +108,7 @@ const ITEMS: AlbumItem[] = [
     id: "7",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/7-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239025&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Стяжка",
     date: "1.2024",
@@ -120,7 +119,7 @@ const ITEMS: AlbumItem[] = [
     id: "8",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/8-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239026&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Стяжка",
     date: "4.2024",
@@ -131,7 +130,7 @@ const ITEMS: AlbumItem[] = [
     id: "9",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/9-poster.jpg",
-    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
+    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239027&autoplay=1",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "8.2024",
@@ -496,27 +495,14 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
   );
 }
 
-/**
- * Обычная ссылка на клип VK — https://vkvideo.ru/clip-240409043_456239034 —
- * не годится напрямую в src iframe (это страница сайта VK, а не embed-виджет).
- * Парсим из неё oid (id владельца, для группы/паблика — отрицательный,
- * поэтому знак "-" перед первым числом — часть oid, не разделитель) и id
- * самого видео, и собираем ссылку на встраиваемый плеер video_ext.php —
- * именно её понимает iframe.
- */
-function vkClipToEmbedSrc(vkUrl?: string): string {
-  if (!vkUrl) return "";
-  const match = vkUrl.match(/clip(-?\d+)_(\d+)/);
-  if (!match) return vkUrl; // на случай, если уже вставили готовую embed-ссылку
-  const [, oid, id] = match;
-  return `https://vkvideo.ru/video_ext.php?oid=${oid}&id=${id}&hd=2`;
-}
 
 /**
- * Видео теперь проигрывается через встроенный плеер VK Video (iframe),
- * а не через прямую ссылку на mp4. VK сам решает вопросы CORS/HTTP Range/
- * адаптивного битрейта и стабильно работает на iOS Safari "из коробки" —
- * ровно то, что не удавалось получить с mp4-файлами напрямую с R2.
+ * Видео теперь проигрывается через встроенный плеер VK Клипов (iframe с
+ * clip_ext.php) — это официальный embed-код, полученный через
+ * "Поделиться → Код для вставки" у самих клипов, а не собранный вручную из
+ * обычной ссылки на страницу клипа: у обычной ссылки нет нужных для плеера
+ * данных, из-за чего он падал с ошибкой "Missing canvas for given canvasId"
+ * на iOS Safari. Официальный embed этой проблемы не имеет.
  *
  * Скелетон показываем, пока iframe не прислал событие onLoad — так лайтбокс
  * не остаётся с пустым чёрным прямоугольником на медленном соединении.
@@ -545,7 +531,7 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
         </div>
       )}
       <iframe
-        src={vkClipToEmbedSrc(item.vkUrl)}
+        src={item.vkUrl}
         title={item.alt}
         allow="autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write"
         allowFullScreen
