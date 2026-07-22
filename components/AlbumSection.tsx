@@ -2,49 +2,35 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import dynamic from "next/dynamic";
-
-// Стили плеера Vidstack — обычный CSS, не CSS-модуль.
-// App Router (папка app/): можно импортировать прямо тут, ничего переносить не нужно.
-// Pages Router (папка pages/): Next.js разрешает импорт обычного CSS только в
-// корневом файле pages/_app.tsx — перенесите две строки ниже в самый верх
-// _app.tsx, иначе сборка на Vercel упадёт.
-import "@vidstack/react/player/styles/default/theme.css";
-import "@vidstack/react/player/styles/default/layouts/video.css";
 
 /**
- * Секция «Альбом объектов» — сетка фото/видео + лайтбокс + видеоплеер на Vidstack.
+ * Секция «Альбом объектов» — сетка фото/видео + лайтбокс.
  * Цвета: фон #162E45, акцент #CFA779, вспомогательный #CFCFEA.
  *
- * Видеоплеер: npm i @vidstack/react@next (версия под тегом "latest" — ещё 0.x, старый API без MediaPlayer/MediaProvider)
- * Готовый продакшн-плеер (буферизация, перемотка с превью, fullscreen,
- * PiP, доступность, корректная работа на iOS/Android из коробки) вместо
- * самописных контролов — меньше багов на разных мобильных браузерах.
- * Тема цвета/шрифт — через CSS-переменные --video-*, см. videoThemeVars ниже,
- * сам пакет и его CSS не трогаем.
- * Плеер грузится динамически (next/dynamic, ssr:false) — его JS-чанк не
- * попадает в основной бандл и не выполняется на сервере, а до его загрузки
- * показывается свой скелетон-лоадер.
+ * Видео: вместо файлов на R2 + свой плеер — embed через VK Video (iframe).
+ * Причина: прямая раздача mp4 с объектных хранилищ (R2/S3) требует
+ * правильных CORS + HTTP Range заголовков, а iOS Safari к этому особенно
+ * строг — без этого видео не проигрывается на iPhone, хотя на десктопе
+ * может работать. VK Video отдаёт готовый HLS-плеер через iframe, который
+ * решает эту проблему за нас и бесплатно.
+ *
+ * Как подключить видео:
+ * 1) Загрузить видео на vk.com (можно с приватностью "не в поиске")
+ * 2) На странице видео → "Поделиться" → "Код для вставки"
+ * 3) Скопировать значение src из полученного <iframe src="https://vk.com/video_ext.php?...">
+ * 4) Вставить обычную ссылку на клип в поле vkUrl у нужного объекта в массиве ITEMS ниже
+ *    (например https://vkvideo.ru/clip-240409043_456239034) — embed-URL для
+ *    iframe собирается из неё автоматически функцией vkClipToEmbedSrc()
  *
  * Анимации сетки/лайтбокса — CSS-transition + IntersectionObserver, без
  * дополнительных библиотек.
- *
- * Как подключить:
- * 1) npm i @vidstack/react@next  <- ОБЯЗАТЕЛЬНО с @next, иначе поставится старая 0.x без нужных экспортов
- * 2) Положить компонент в components/AlbumSection.tsx
- * 3) Заполнить массив ITEMS реальными путями (public/album/...) или URL
- * 4) <AlbumSection /> на странице
- *
- * Для видео: лёгкий постер (jpg/webp) + сжатый mp4 (H.264, до ~6-8 Мбит/с),
- * либо Cloudflare Stream / Mux — тогда вместо src в MediaPlayer нужно
- * подставить их источник (Vidstack поддерживает HLS/DASH из коробки).
  */
 
 type AlbumItem = {
   id: string;
   type: "photo" | "video";
   src: string; // фото: путь к изображению; видео: путь к постеру (превью)
-  videoSrc?: string; // обязателен для type === "video"
+  vkUrl?: string; // обязателен для type === "video" — обычная ссылка вида https://vkvideo.ru/clip-OID_ID
   alt: string;
   category: string; // напр. "Фундамент", "Кровля", "Отделка"
   date?: string; // напр. "03.2025"
@@ -57,7 +43,7 @@ const ITEMS: AlbumItem[] = [
     id: "1",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239029",
     alt: "Монтаж кровли, таймлапс",
     category: "Отделка",
     date: "05.2025",
@@ -68,7 +54,7 @@ const ITEMS: AlbumItem[] = [
     id: "2",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239028",
     alt: "Монтаж кровли, таймлапс",
     category: "Фундемент",
     date: "05.2025",
@@ -79,7 +65,7 @@ const ITEMS: AlbumItem[] = [
     id: "3",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239031",
     alt: "Монтаж кровли, таймлапс",
     category: "Архитектура",
     date: "12.2025",
@@ -90,7 +76,7 @@ const ITEMS: AlbumItem[] = [
     id: "4",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239032",
     alt: "Монтаж кровли, таймлапс",
     category: "Фасад",
     date: "12.2025",
@@ -101,7 +87,7 @@ const ITEMS: AlbumItem[] = [
     id: "5",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
     alt: "Монтаж кровли, таймлапс",
     category: "Фундемент",
     date: "7.2025",
@@ -112,7 +98,7 @@ const ITEMS: AlbumItem[] = [
     id: "6",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239034",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "6.2025",
@@ -123,7 +109,7 @@ const ITEMS: AlbumItem[] = [
     id: "7",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/7-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/7.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
     alt: "Монтаж кровли, таймлапс",
     category: "Стяжка",
     date: "1.2024",
@@ -134,7 +120,7 @@ const ITEMS: AlbumItem[] = [
     id: "8",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/8-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/8.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
     alt: "Монтаж кровли, таймлапс",
     category: "Стяжка",
     date: "4.2024",
@@ -145,7 +131,7 @@ const ITEMS: AlbumItem[] = [
     id: "9",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/9-poster.jpg",
-    videoSrc: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/9.mp4",
+    vkUrl: "https://vkvideo.ru/clip-240409043_456239033",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "8.2024",
@@ -510,75 +496,37 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
   );
 }
 
-
-// Цветовая тема плеера через CSS-переменные Vidstack (--video-*) —
-// поверх ancestor-элемента, без правки чужого CSS-файла. --video-font-family:
-// inherit — чтобы плеер подхватывал тот же шрифт, что и остальной сайт,
-// а не свой дефолтный sans-serif.
-const videoThemeVars = {
-  "--video-brand": "#CFA779",
-  "--video-bg": "#0b1826",
-  "--video-controls-color": "#CFCFEA",
-  "--video-focus-ring-color": "#CFA779",
-  "--video-border-radius": "0.5rem",
-  "--video-font-family": "inherit",
-};
-
-/** Скелетон-заглушка, пока грузится JS-чанк плеера (первое открытие видео за сессию). */
-function VideoPlayerSkeleton() {
-  return (
-    <div className="flex h-[75dvh] max-h-[75dvh] w-[50vw] min-w-[240px] max-w-full items-center justify-center rounded-lg bg-[#0b1826]">
-      <span
-        className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]"
-        role="status"
-        aria-label="Загрузка плеера"
-      />
-    </div>
-  );
+/**
+ * Обычная ссылка на клип VK — https://vkvideo.ru/clip-240409043_456239034 —
+ * не годится напрямую в src iframe (это страница сайта VK, а не embed-виджет).
+ * Парсим из неё oid (id владельца, для группы/паблика — отрицательный,
+ * поэтому знак "-" перед первым числом — часть oid, не разделитель) и id
+ * самого видео, и собираем ссылку на встраиваемый плеер video_ext.php —
+ * именно её понимает iframe.
+ */
+function vkClipToEmbedSrc(vkUrl?: string): string {
+  if (!vkUrl) return "";
+  const match = vkUrl.match(/clip(-?\d+)_(\d+)/);
+  if (!match) return vkUrl; // на случай, если уже вставили готовую embed-ссылку
+  const [, oid, id] = match;
+  return `https://vkvideo.ru/video_ext.php?oid=${oid}&id=${id}&hd=2`;
 }
 
 /**
- * Видеоплеер на Vidstack (https://vidstack.io) вместо самописных контролов —
- * готовое, обкатанное решение для буферизации, перемотки, fullscreen (в т.ч.
- * на iOS Safari) и доступности. Сам плеер и его лейаут подгружаются через
- * next/dynamic с ssr:false одним куском: код Vidstack не попадает в основной
- * бандл и не пытается выполниться на сервере (там нет DOM/customElements),
- * а пока чанк грузится — показывается VideoPlayerSkeleton.
+ * Видео теперь проигрывается через встроенный плеер VK Video (iframe),
+ * а не через прямую ссылку на mp4. VK сам решает вопросы CORS/HTTP Range/
+ * адаптивного битрейта и стабильно работает на iOS Safari "из коробки" —
+ * ровно то, что не удавалось получить с mp4-файлами напрямую с R2.
+ *
+ * Скелетон показываем, пока iframe не прислал событие onLoad — так лайтбокс
+ * не остаётся с пустым чёрным прямоугольником на медленном соединении.
  */
-const VidstackVideoPlayer = dynamic<{ item: AlbumItem }>(
-  async () => {
-    const [{ MediaPlayer, MediaProvider }, { DefaultVideoLayout, defaultLayoutIcons }] =
-      await Promise.all([
-        import("@vidstack/react"),
-        import("@vidstack/react/player/layouts/default"),
-      ]);
-
-    function Player({ item }: { item: AlbumItem }) {
-      return (
-        <MediaPlayer
-          title={item.alt}
-          src={item.videoSrc}
-          poster={item.src}
-          playsInline
-          aspectRatio={`${item.width}/${item.height}`}
-          className="h-full w-full overflow-hidden rounded-lg"
-          style={videoThemeVars}
-        >
-          <MediaProvider />
-          <DefaultVideoLayout icons={defaultLayoutIcons} colorScheme="dark" />
-        </MediaPlayer>
-      );
-    }
-
-    return Player;
-  },
-  { ssr: false, loading: () => <VideoPlayerSkeleton /> },
-);
-
 function VideoPlayer({ item }: { item: AlbumItem }) {
+  const [loaded, setLoaded] = useState(false);
+
   return (
     <div
-      className="relative overflow-hidden rounded-lg"
+      className="relative overflow-hidden rounded-lg bg-[#0b1826]"
       style={{
         aspectRatio: `${item.width} / ${item.height}`,
         height: "75dvh",
@@ -587,7 +535,26 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
         maxWidth: "100%",
       }}
     >
-      <VidstackVideoPlayer item={item} />
+      {!loaded && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span
+            className="h-9 w-9 animate-spin rounded-full border-2 border-[#CFA779]/25 border-t-[#CFA779]"
+            role="status"
+            aria-label="Загрузка видео"
+          />
+        </div>
+      )}
+      <iframe
+        src={vkClipToEmbedSrc(item.vkUrl)}
+        title={item.alt}
+        allow="autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write"
+        allowFullScreen
+        frameBorder={0}
+        className={`h-full w-full transition-opacity duration-300 ${
+          loaded ? "opacity-100" : "opacity-0"
+        }`}
+        onLoad={() => setLoaded(true)}
+      />
     </div>
   );
 }
