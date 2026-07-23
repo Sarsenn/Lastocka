@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Unbounded, Manrope } from "next/font/google";
 import "./globals.css";
-import "plyr/dist/plyr.css";
-import ErudaDebug from "../components/ErudaDebug";
 
 const unbounded = Unbounded({
   subsets: ["latin", "cyrillic"],
@@ -59,7 +57,6 @@ export default function RootLayout({
 
         {/* ВРЕМЕННО для отладки бага на мобильных — удалить после того,
             как разберёмся с проблемой видео на iOS. */}
-        <ErudaDebug />
       </body>
     </html>
   );
