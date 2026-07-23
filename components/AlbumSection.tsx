@@ -7,19 +7,26 @@ import Image from "next/image";
  * Секция «Альбом объектов» — сетка фото/видео + лайтбокс.
  * Цвета: фон #162E45, акцент #CFA779, вспомогательный #CFCFEA.
  *
- * Видео: вместо файлов на R2 + свой плеер — embed через VK Video (iframe).
- * Причина: прямая раздача mp4 с объектных хранилищ (R2/S3) требует
- * правильных CORS + HTTP Range заголовков, а iOS Safari к этому особенно
- * строг — без этого видео не проигрывается на iPhone, хотя на десктопе
- * может работать. VK Video отдаёт готовый HLS-плеер через iframe, который
- * решает эту проблему за нас и бесплатно.
+ * Видео: самохостинг mp4 из public/videos на Vercel/Netlify — нативный
+ * <video playsInline muted>. Vercel/Netlify отдают статику из public/ с
+ * поддержкой HTTP Range из коробки, так что CORS/Range на них не проблема.
+ * Раньше здесь был embed VK Video, т.к. предыдущие mp4-файлы не проигрывали
+ * видеодорожку на iOS Safari (играл только звук) — причина была не в
+ * хостинге, а в кодировании файлов (не тот профиль H.264 и/или moov atom
+ * не в начале файла). См. инструкцию по перекодированию ниже.
  *
  * Как подключить видео:
- * 1) На странице клипа в VK → "Поделиться" → "Код для вставки"
- * 2) Скопировать значение src из полученного
- *    <iframe src="https://vk.com/clip_ext.php?oid=...&id=...&autoplay=1">
- * 3) Вставить эту готовую ссылку целиком в поле vkUrl нужного объекта
- *    в массиве ITEMS ниже — парсить/собирать её самим не нужно
+ * 1) Перекодировать исходник под iOS Safari:
+ *      ffmpeg -i input.mov \
+ *        -c:v libx264 -profile:v main -level 4.0 -pix_fmt yuv420p \
+ *        -vf "scale=-2:1280" \
+ *        -movflags +faststart \
+ *        -c:a aac -b:a 128k \
+ *        -crf 23 -preset slow \
+ *        output.mp4
+ * 2) Положить результат в public/videos/<name>.mp4
+ * 3) Указать путь вида "/videos/<name>.mp4" в поле mp4Url нужного объекта
+ *    в массиве ITEMS ниже
  *
  * Анимации сетки/лайтбокса — CSS-transition + IntersectionObserver, без
  * дополнительных библиотек.
@@ -29,7 +36,7 @@ type AlbumItem = {
   id: string;
   type: "photo" | "video";
   src: string; // фото: путь к изображению; видео: путь к постеру (превью)
-  vkUrl?: string; // обязателен для type === "video" — готовый src вида https://vk.com/clip_ext.php?oid=...&id=...&autoplay=1
+  mp4Url?: string; // обязателен для type === "video" — путь к mp4, напр. "/videos/1.mp4"
   alt: string;
   category: string; // напр. "Фундамент", "Кровля", "Отделка"
   date?: string; // напр. "03.2025"
@@ -42,7 +49,7 @@ const ITEMS: AlbumItem[] = [
     id: "1",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/1-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239019&autoplay=1",
+    mp4Url: "/videos/1.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Отделка",
     date: "05.2025",
@@ -53,7 +60,7 @@ const ITEMS: AlbumItem[] = [
     id: "2",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/2-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239020&autoplay=1",
+    mp4Url: "/videos/2.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Фундемент",
     date: "05.2025",
@@ -64,7 +71,7 @@ const ITEMS: AlbumItem[] = [
     id: "3",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/3-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239021&autoplay=1",
+    mp4Url: "/videos/3.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Архитектура",
     date: "12.2025",
@@ -75,7 +82,7 @@ const ITEMS: AlbumItem[] = [
     id: "4",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/4-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239022&autoplay=1",
+    mp4Url: "/videos/4.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Фасад",
     date: "12.2025",
@@ -86,7 +93,7 @@ const ITEMS: AlbumItem[] = [
     id: "5",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/5-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239023&autoplay=1",
+    mp4Url: "/videos/5.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Фундемент",
     date: "7.2025",
@@ -97,7 +104,7 @@ const ITEMS: AlbumItem[] = [
     id: "6",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/6-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239024&autoplay=1",
+    mp4Url: "/videos/6.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "6.2025",
@@ -108,7 +115,7 @@ const ITEMS: AlbumItem[] = [
     id: "7",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/7-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239025&autoplay=1",
+    mp4Url: "/videos/7.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Стяжка",
     date: "1.2024",
@@ -119,7 +126,7 @@ const ITEMS: AlbumItem[] = [
     id: "8",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/8-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239026&autoplay=1",
+    mp4Url: "/videos/8.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Стяжка",
     date: "4.2024",
@@ -130,7 +137,7 @@ const ITEMS: AlbumItem[] = [
     id: "9",
     type: "video",
     src: "https://pub-e6ce1628bfe741e8bc850f609e50acf0.r2.dev/9-poster.jpg",
-    vkUrl: "https://vk.com/clip_ext.php?oid=699303164&id=456239027&autoplay=1",
+    mp4Url: "/videos/9.mp4",
     alt: "Монтаж кровли, таймлапс",
     category: "Кровля",
     date: "8.2024",
@@ -497,21 +504,28 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
 
 
 /**
- * Видео теперь проигрывается через встроенный плеер VK Клипов (iframe с
- * clip_ext.php) — это официальный embed-код, полученный через
- * "Поделиться → Код для вставки" у самих клипов, а не собранный вручную из
- * обычной ссылки на страницу клипа: у обычной ссылки нет нужных для плеера
- * данных, из-за чего он падал с ошибкой "Missing canvas for given canvasId"
- * на iOS Safari. Официальный embed этой проблемы не имеет.
+ * Видео — самохостинг mp4 из public/videos, нативный <video>.
  *
- * Скелетон показываем, пока iframe не прислал событие onLoad — так лайтбокс
- * не остаётся с пустым чёрным прямоугольником на медленном соединении.
+ * Обязательные атрибуты для iOS Safari:
+ * - playsInline — без него iOS форсит переход в нативный fullscreen-плеер
+ *   вместо проигрывания внутри лайтбокса;
+ * - muted — обязателен для автоплея (со звуком iOS автоплей блокирует);
+ * - preload="metadata" — не тянуть весь файл заранее, только длительность/
+ *   размер, экономит трафик на мобильном.
+ *
+ * data-media-player на обёртке — используется в Lightbox, чтобы стрелки
+ * влево/вправо, когда фокус на видео, не переключали слайды.
+ *
+ * Если видео опять начнёт проигрывать только звук без картинки — почти
+ * наверняка причина в кодировании файла, а не в этом компоненте или
+ * хостинге. См. ffmpeg-команду в шапке файла.
  */
 function VideoPlayer({ item }: { item: AlbumItem }) {
   const [loaded, setLoaded] = useState(false);
 
   return (
     <div
+      data-media-player
       className="relative overflow-hidden rounded-lg bg-[#0b1826]"
       style={{
         aspectRatio: `${item.width} / ${item.height}`,
@@ -530,16 +544,19 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
           />
         </div>
       )}
-      <iframe
-        src={item.vkUrl}
-        title={item.alt}
-        allow="autoplay; encrypted-media; fullscreen; picture-in-picture; clipboard-write"
-        allowFullScreen
-        frameBorder={0}
-        className={`h-full w-full transition-opacity duration-300 ${
+      <video
+        src={item.mp4Url}
+        poster={item.src}
+        controls
+        playsInline
+        muted
+        loop
+        autoPlay
+        preload="metadata"
+        className={`h-full w-full object-contain transition-opacity duration-300 ${
           loaded ? "opacity-100" : "opacity-0"
         }`}
-        onLoad={() => setLoaded(true)}
+        onLoadedData={() => setLoaded(true)}
       />
     </div>
   );
