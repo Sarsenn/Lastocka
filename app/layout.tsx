@@ -52,12 +52,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ru" className={`${unbounded.variable} ${manrope.variable}`}>
-      <body>
-        {children}
-
-        {/* ВРЕМЕННО для отладки бага на мобильных — удалить после того,
-            как разберёмся с проблемой видео на iOS. */}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

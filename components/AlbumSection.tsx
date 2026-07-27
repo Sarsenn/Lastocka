@@ -439,9 +439,7 @@ function Lightbox({
 
         <div
           key={item.id}
-          className={`relative flex max-h-full max-w-full items-center justify-center transition-all duration-300 ease-out ${
-            visible ? "scale-100 opacity-100" : "scale-95 opacity-0"
-          }`}
+          className="relative flex max-h-full max-w-full scale-100 items-center justify-center opacity-100"
         >
           {item.type === "photo" ? (
             <LightboxPhoto item={item} />
@@ -551,7 +549,6 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
         playsInline
         muted
         loop
-        autoPlay
         preload="metadata"
         className={`h-full w-full object-contain transition-opacity duration-300 ${
           loaded ? "opacity-100" : "opacity-0"
