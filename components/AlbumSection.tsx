@@ -515,28 +515,14 @@ function LightboxPhoto({ item }: { item: AlbumItem }) {
  * data-media-player на обёртке — используется в Lightbox, чтобы стрелки
  * влево/вправо, когда фокус на видео, не переключали слайды.
  *
- * Своя кнопка play поверх постера (вместо autoPlay) — надёжнее на iOS
- * Safari и даёт пользователю явный контроль над стартом. После нажатия
- * видео запускается через videoRef.play(), дальше управление — через
- * нативные controls.
+ * Play — нативный, из controls браузера (без autoPlay и без своей
+ * кнопки поверх постера — она оказалась лишней, у controls уже есть play).
  *
  * Если видео опять начнёт проигрывать только звук без картинки — почти
  * наверняка причина в кодировании файла, а не в этом компоненте или
  * хостинге. См. ffmpeg-команду в шапке файла.
  */
 function VideoPlayer({ item }: { item: AlbumItem }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-
-  const handlePlayClick = () => {
-    const el = videoRef.current;
-    if (!el) return;
-    el.play().catch(() => {
-      // Автоплей может быть заблокирован браузером — пользователь
-      // всё равно увидит нативные controls и сможет запустить вручную.
-    });
-  };
-
   return (
     <div
       data-media-player
@@ -549,7 +535,6 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
       }}
     >
       <video
-        ref={videoRef}
         src={item.mp4Url}
         poster={item.src}
         controls
@@ -558,27 +543,7 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
         loop
         preload="metadata"
         className="h-full w-full object-contain"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
       />
-
-      {/* Кнопка play поверх постера — до старта воспроизведения.
-          Клик по ней запускает видео programmatically; после этого
-          пользователь управляет через нативные controls. */}
-      {!playing && (
-        <button
-          type="button"
-          onClick={handlePlayClick}
-          aria-label="Воспроизвести видео"
-          className="group absolute inset-0 flex items-center justify-center"
-        >
-          <span className="flex h-16 w-16 items-center justify-center rounded-full bg-[#CFA779]/90 shadow-lg transition-transform duration-200 group-active:scale-90 sm:group-hover:scale-110">
-            <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 fill-[#162E45]">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          </span>
-        </button>
-      )}
     </div>
   );
 }
