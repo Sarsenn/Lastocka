@@ -402,9 +402,7 @@ function Lightbox({
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col overflow-x-hidden transition-opacity duration-200 ${
-        visible ? "opacity-100" : "opacity-0"
-      }`}
+      className="fixed inset-0 z-50 flex flex-col overflow-x-hidden opacity-100"
       style={{ touchAction: "pan-y", overscrollBehavior: "contain" }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
