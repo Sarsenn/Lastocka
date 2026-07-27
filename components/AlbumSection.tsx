@@ -426,7 +426,10 @@ function Lightbox({
         </button>
       </div>
 
-      <div className="relative flex flex-1 items-center justify-center px-2 pb-6 sm:px-8">
+      <div
+        className="relative flex flex-1 items-center justify-center px-2 pb-6 sm:px-8"
+        style={{ minHeight: 0, overflow: "hidden" }}
+      >
         <button
           onClick={() => goTo(index - 1)}
           aria-label="Предыдущее"
@@ -522,13 +525,12 @@ function VideoPlayer({ item }: { item: AlbumItem }) {
   return (
     <div
       data-media-player
-      className="relative overflow-hidden rounded-lg bg-[#0b1826]"
+      className="relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-[#0b1826]"
       style={{
-        aspectRatio: `${item.width} / ${item.height}`,
-        height: "75dvh",
-        maxHeight: "75dvh",
-        width: "auto",
-        maxWidth: "100%",
+        maxWidth: "900px",
+        width: "100%",
+        height: "80vh",
+        maxHeight: "80vh",
       }}
     >
       {!loaded && (
